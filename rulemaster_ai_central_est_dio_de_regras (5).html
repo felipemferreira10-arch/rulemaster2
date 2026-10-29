@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>RuleMaster AI - Central de Regras</title>
+
+  <!-- PWA & Mobile Web App Meta Tags -->
+  <meta name="theme-color" content="#020617">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="RuleMaster AI">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%23020617'/><text x='50' y='68' font-size='55' text-anchor='middle'>🎲</text></svg>">
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;800&family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+  <style id="custom-app-styles">
+    html, body, #app-root {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      min-height: 100vh;
+      background-color: #020617;
+      color: #f8fafc;
+      overflow-x: hidden;
+      -webkit-tap-highlight-color: transparent;
+      font-family: 'Inter', sans-serif;
+    }
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(0, 0, 0, 0.2);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(255, 255, 255, 0.4);
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .animate-fadeIn {
+      animation: fadeIn 0.2s ease-out forwards;
+    }
+  </style>
+  <style id="dynamic-theme-css"></style>
+</head>
+<body class="antialiased selection:bg-purple-500/30">
+
+  <div id="app-root" class="min-h-screen flex flex-col"></div>
+
+  <!-- Service Worker para PWA -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        const swCode = `
+          self.addEventListener('install', (e) => { self.skipWaiting(); });
+          self.addEventListener('activate', (e) => { e.waitUntil(clients.claim()); });
+          self.addEventListener('fetch', (e) => { e.respondWith(fetch(e.request).catch(() => caches.match(e.request))); });
+        `;
+        const blob = new Blob([swCode], { type: 'application/javascript' });
+        const swUrl = URL.createObjectURL(blob);
+        navigator.serviceWorker.register(swUrl).catch(() => {});
+      });
+    }
+  </script>
+
+  <!-- JAVASCRIPT NATIVO (VANILLA JS - RODAGEM DIRETA SEM COMPILAÇÃO) -->
+  <script>
+    // --- ÍCONES SVG LEVES E NATIVOS ---
+    function getIcon(name, extraClass = "w-4 h-4") {
+      const icons = {
+        search: '<path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>',
+        shield: '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>',
+        key: '<path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 11-7.778 7.778 5.5 5.5 0 017.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/>',
+        sparkles: '<path d="M5 3v4M3 5h4M6 17v4M4 19h4M13 3l2.5 5.5L21 11l-5.5 2.5L13 19l-2.5-5.5L5 11l5.5-2.5z"/>',
+        book: '<path d="M4 19.5A2.5 2.5 0 016.5 17H20M4 19.5A2.5 2.5 0 006.5 22H20V3H6.5A2.5 2.5 0 004 5.5v14z"/>',
+        message: '<path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2v10z"/>',
+        plus: '<path d="M12 5v14M5 12h14"/>',
+        trash: '<path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>',
+        edit: '<path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>',
+        check: '<path d="M20 6L9 17l-5-5"/>',
+        download: '<path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/>',
+        alert: '<path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>',
+        users: '<path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8zm14 10v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/>',
+        clock: '<path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>',
+        trophy: '<path d="M8 21h8m-4-4v4m-6-8a5 5 0 0010 0V3H6v6zm-3-3h3m10 0h3"/>',
+        palette: '<path d="M12 2a10 10 0 00-10 10c0 5.523 4.477 10 10 10a2 2 0 002-2c0-.55-.22-1.05-.59-1.41-.36-.36-.59-.86-.59-1.41 0-1.1.9-2 2-2h2.41c2.95 0 5.34-2.39 5.34-5.34 0-4.32-3.8-7.84-8.57-7.84z"/>',
+        zap: '<path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>',
+        layers: '<polygon points="12 2 2 7 12 12 22 7 12 2"/>',
+        x: '<path d="M18 6L6 18M6 6l12 12"/>',
+        lock: '<rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>',
+        send: '<path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/>',
+        bot: '<rect x="3" y="11" width="18" height="10" rx="2"/>',
+        video: '<path d="M23 7l-7 5 7 5V7zM1 5h14v14H1z"/>',
+        mic: '<path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3zM19 10v2a7 7 0 01-14 0v-2M12 19v4M8 23h8"/>',
+        volume: '<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>',
+        cloud: '<path d="M18 10h-1.26A8 8 0 109 20h9a5 5 0 000-10z"/>',
+        github: '<path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 00-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0020 4.77 5.07 5.07 0 0019.91 1S18.73.65 16 2.48a13.38 13.38 0 00-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 005 4.77a5.44 5.44 0 00-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 009 18.13V22"/>'
+      };
+      const path = icons[name] || '<circle cx="12" cy="12" r="10"/>';
+      return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="${extraClass}">${path}</svg>`;
+    }
+
+    // --- BANCO DE DADOS DOS 15 JOGOS ---
+    const BUILTIN_GAMES = {
+      wonders_7: {
+        id: "wonders_7", name: "7 Wonders", category: "Draft / Civilização", icon: "🏛️", players: "2-7 Jogadores", duration: "30-45 min", difficulty: "Médio", color: "from-amber-600 to-amber-800", isPublished: true, youtubeVideos: [{ id: "1-J_0gW2p8Y", title: "Como Jogar 7 Wonders" }],
+        objective: "Liderar uma das 7 grandes cidades da antiguidade desenvolvendo ciência, exércitos e monumentos através de 3 Eras.",
+        setup: ["Distribua 1 Tabuleiro de Maravilha para cada um.", "Prepare os baralhos das Eras I, II e III.", "Cada jogador começa com 3 moedas."],
+        turnStructure: ["1. Escolher uma carta da mão secretamente.", "2. Baixar a carta ou descartar por 3 moedas.", "3. Passar as cartas restantes para o vizinho."],
+        victoryCondition: "Acumular mais pontos ao final das 3 Eras somando vitórias militares, ciência e estruturas civis.",
+        quickCheatSheet: ["Azul = Pontos diretos", "Vermelho = Força militar", "Verde = Ciência"],
+        houseRules: [{ id: "hr-1", text: "Maravilhas Lado B obrigatórias.", active: true }],
+        faqs: [{ q: "Posso comprar do vizinho?", a: "Sim, por 2 moedas cada recurso." }]
+      },
+      war: {
+        id: "war", name: "War", category: "Conquista Territorial", icon: "🪖", players: "3-6 Jogadores", duration: "90-180 min", difficulty: "Médio", color: "from-red-700 to-slate-900", isPublished: true, youtubeVideos: [],
+        objective: "Cumprir secretamente o objetivo sorteado na carta de missão ou conquistar 24 territórios.",
+        setup: ["Sorteie os territórios entre os jogadores.", "Distribua 1 Carta de Objetivo secreta para cada um.", "Coloque os exércitos iniciais."],
+        turnStructure: ["1. Receber novos exércitos (Territórios / 2).", "2. Atacar territórios vizinhos rolando dados.", "3. Remanejar exércitos entre seus territórios."],
+        victoryCondition: "Concluir 100% dos requisitos descritos na sua carta de objetivo secreta.",
+        quickCheatSheet: ["Atacante: Dados Vermelhos (Máx 3)", "Defensor: Dados Amarelos (Máx 3)", "Empate é do DEFENSOR!"],
+        houseRules: [], faqs: []
+      },
+      trio: {
+        id: "trio", name: "Trio", category: "Dedução / Memória", icon: "🔢", players: "3-6 Jogadores", duration: "15 min", difficulty: "Fácil", color: "from-blue-500 to-purple-700", isPublished: true, youtubeVideos: [],
+        objective: "Encontrar 3 cartas de números idênticos (um Trio) revelando cartas da mesa ou das mãos.",
+        setup: ["Embaralhe cartas de 1 a 12. Distribua aos jogadores e coloque o restante no centro."],
+        turnStructure: ["1. Revele uma carta da mesa OU peça a menor/maior carta da mão de alguém.", "2. Acerte 3 iguais para garantir o Trio."],
+        victoryCondition: "Conseguir 3 Trios ou formar o Trio do número 7.",
+        quickCheatSheet: ["Só pode pedir a MENOR ou a MAIOR carta da mão de um jogador!"], houseRules: [], faqs: []
+      },
+      taco_gato: {
+        id: "taco_gato", name: "Taco Gato Cabra Queijo Pizza", category: "Agilidade / Reflexo", icon: "🌮", players: "2-8 Jogadores", duration: "10-15 min", difficulty: "Muito Fácil", color: "from-pink-500 to-amber-600", isPublished: true, youtubeVideos: [],
+        objective: "Livrar-se de todas as suas cartas dizendo a sequência correta e batendo no monte central.",
+        setup: ["Distribua todas as cartas igualmente viradas para baixo."],
+        turnStructure: ["1. Jogue uma carta dizendo a sequência: 'Taco', 'Gato', 'Cabra', 'Queijo', 'Pizza'.", "2. Se a palavra bater com a carta, TODOS batem no monte!"],
+        victoryCondition: "Ficar sem cartas e ser o primeiro a bater no monte em uma combinação correta.",
+        quickCheatSheet: ["Gorila = Bata no peito", "Narval = Chifre na cabeça", "Marmota = Bata na mesa!"], houseRules: [], faqs: []
+      },
+      azul_mini: {
+        id: "azul_mini", name: "Azul Mini", category: "Abstração / Padrões", icon: "🧱", players: "2-4 Jogadores", duration: "30-45 min", difficulty: "Fácil", color: "from-cyan-600 to-teal-800", isPublished: true, youtubeVideos: [],
+        objective: "Decorar as paredes do Palácio com azulejos acumulando mais pontos.",
+        setup: ["Coloque 4 azulejos do saco em cada fábrica no centro."],
+        turnStructure: ["1. Pegue azulejos de uma cor de uma fábrica.", "2. Coloque na linha de padrão do seu tabuleiro.", "3. Transfira para a parede ao completar a linha."],
+        victoryCondition: "Maior pontuação quando alguém completar pelo menos uma linha horizontal na parede.",
+        quickCheatSheet: ["Azulejos que sobram vão para o chão e dão pontos negativos!"], houseRules: [], faqs: []
+      },
+      coup: {
+        id: "coup", name: "Coup", category: "Bluff / Dedução", icon: "🗡️", players: "2-6 Jogadores", duration: "15 min", difficulty: "Fácil", color: "from-red-600 to-amber-800", isPublished: true, youtubeVideos: [],
+        objective: "Eliminar a influência de todos os outros jogadores e ser o único sobrevivente.",
+        setup: ["Cada jogador recebe 2 moedas e 2 cartas de personagem viradas para baixo."],
+        turnStructure: ["Escolha UMA ação no turno (pode mentir sobre o que tem):", "- Renda (+1) | Ajuda Externa (+2) | Coup (7 moedas e mata 1 carta)", "- Duque (+3), Capitão (Rouba 2), Assassino (mata por 3)"],
+        victoryCondition: "Ser o último jogador com cartas vivas na mesa.",
+        quickCheatSheet: ["Com 10 moedas ou mais no início do turno, o Coup é OBRIGATÓRIO!"], houseRules: [], faqs: []
+      },
+      hamburgueria: {
+        id: "hamburgueria", name: "Hamburgueria Maluca", category: "Família / Infantil", icon: "🍔", players: "2-4 Jogadores", duration: "20-30 min", difficulty: "Muito Fácil", color: "from-amber-500 to-red-600", isPublished: true, youtubeVideos: [],
+        objective: "Montar o seu hambúrguer completo primeiro coletando todos os ingredientes.",
+        setup: ["Coloque os ingredientes no tabuleiro e posicione os peões no início."],
+        turnStructure: ["1. Role o dado e avance pelo tabuleiro.", "2. Pegue o ingrediente da casa se ainda não o tiver."],
+        victoryCondition: "Completar o prato com os 5 ingredientes e voltar ao início.",
+        quickCheatSheet: ["Pão + Carne + Queijo + Alface + Tomate = Hambúrguer!"], houseRules: [], faqs: []
+      },
+      istanbul: {
+        id: "istanbul", name: "Istanbul", category: "Movimento de Trabalhadores", icon: "🕌", players: "2-5 Jogadores", duration: "40-60 min", difficulty: "Médio", color: "from-amber-700 to-orange-800", isPublished: true, youtubeVideos: [],
+        objective: "Mover seu Mercador e Assistentes pelo bazar de Istambul para coletar e trocar mercadorias por Rubis.",
+        setup: ["Organize as 16 os locais em uma grade 4x4. Coloque assistentes na Fonte."],
+        turnStructure: ["1. Mova o Mercador até 2 casas.", "2. Deixe ou resgate um assistente para realizar a ação do local."],
+        victoryCondition: "Ser o primeiro a coletar 5 Rubis no seu carrinho.",
+        quickCheatSheet: ["Sem assistente no local, você NÃO pode fazer a ação!"], houseRules: [], faqs: []
+      },
+      camel_up: {
+        id: "camel_up", name: "Camel Up Card Game", category: "Apostas / Corrida", icon: "🐪", players: "2-6 Jogadores", duration: "30 min", difficulty: "Fácil", color: "from-yellow-600 to-orange-700", isPublished: true, youtubeVideos: [],
+        objective: "Apostar nos camelos certos para enriquecer na corrida do deserto.",
+        setup: ["Monte a pista e posicione os camelos. Distribua cartas de aposta."],
+        turnStructure: ["1. Jogar carta para mover camelo.", "2. Pegar ficha de aposta para a etapa.", "3. Apostar no vencedor final."],
+        victoryCondition: "Acumular mais moedas no final de todas as etapas.",
+        quickCheatSheet: ["Camelos no mesmo espaço se empilham! O do topo fica na frente."], houseRules: [], faqs: []
+      },
+      clue: {
+        id: "clue", name: "Clue (Detetive)", category: "Dedução / Investigação", icon: "🔍", players: "2-6 Jogadores", duration: "45 min", difficulty: "Fácil", color: "from-slate-800 to-indigo-950", isPublished: true, youtubeVideos: [],
+        objective: "Descobrir o Assassino, a Arma e o Local do crime por eliminação.",
+        setup: ["Guarde 1 Suspeito, 1 Arma e 1 Cômodo no Envelope. Distribua o restante."],
+        turnStructure: ["1. Mover pela mansão com o dado.", "2. Faça um palpite ao entrar num cômodo.", "3. O jogador à esquerda deve mostrar 1 carta para desmentir."],
+        victoryCondition: "Fazer uma Acusação Final correta no centro do tabuleiro.",
+        quickCheatSheet: ["Errou a acusação final? Você é eliminado!"], houseRules: [], faqs: []
+      },
+      speed_cups: {
+        id: "speed_cups", name: "Speed Cups", category: "Agilidade / Velocidade", icon: "🥤", players: "2-4 Jogadores", duration: "10-15 min", difficulty: "Muito Fácil", color: "from-red-500 to-blue-600", isPublished: true, youtubeVideos: [],
+        objective: "Empilhar ou alinhar seus 5 copos coloridos na ordem exata da carta antes dos rivais.",
+        setup: ["Cada jogador recebe 5 copos (Verde, Vermelho, Amarelo, Azul, Preto)."],
+        turnStructure: ["1. Virar carta de desafio.", "2. Organizar os copos.", "3. Bater na campainha!"],
+        victoryCondition: "Quem bater a campainha primeiro com a ordem correta ganha a carta.",
+        quickCheatSheet: ["Coisas em cima = Empilhar; Coisas lado a lado = Alinhar!"], houseRules: [], faqs: []
+      },
+      dixit: {
+        id: "dixit", name: "Dixit", category: "Criatividade / Imagem", icon: "🎨", players: "3-6 Jogadores", duration: "30 min", difficulty: "Muito Fácil", color: "from-pink-500 to-indigo-600", isPublished: true, youtubeVideos: [],
+        objective: "Pontuar adivinhando a carta correta do Contador de Histórias através de pistas poéticas.",
+        setup: ["Cada jogador recebe 6 cartas ilustradas e marcadores de voto."],
+        turnStructure: ["1. Contador escolhe 1 carta e dá uma dica.", "2. Outros escolhem 1 carta da própria mão que combine.", "3. Revele e vote secretamente."],
+        victoryCondition: "Atingir 30 pontos na trilha.",
+        quickCheatSheet: ["Se TODOS ou NINGUÉM acertar, o Contador ganha 0 pontos!"], houseRules: [], faqs: []
+      },
+      the_mind: {
+        id: "the_mind", name: "The Mind", category: "Cooperativo / Sincronia", icon: "🧠", players: "2-4 Jogadores", duration: "15-20 min", difficulty: "Fácil", color: "from-teal-600 to-zinc-950", isPublished: true, youtubeVideos: [],
+        objective: "Jogar todas as cartas em ordem crescente de 1 a 100 SEM COMUNICAR uma única palavra.",
+        setup: ["Distribua cartas conforme o nível atual."],
+        turnStructure: ["1. Silêncio absoluto.", "2. Baixe a carta quando sentir que é a menor na mesa.", "3. Se errar a ordem, a equipe perde 1 vida!"],
+        victoryCondition: "Vencer todos os Níveis da partida em equipe.",
+        quickCheatSheet: ["Use a Shuriken para todos descartarem a menor carta!"], houseRules: [], faqs: []
+      },
+      dobble: {
+        id: "dobble", name: "Dobble / Aposta", category: "Percepção Visual", icon: "👁️", players: "2-8 Jogadores", duration: "10 min", difficulty: "Muito Fácil", color: "from-yellow-500 to-purple-700", isPublished: true, youtubeVideos: [],
+        objective: "Encontrar o ÚNICO símbolo idêntico entre duas cartas antes dos oponentes.",
+        setup: ["Distribua 1 carta para cada e coloque a pilha no centro."],
+        turnStructure: ["1. Revele a carta central.", "2. Achar o símbolo em comum e falar em voz alta!", "3. Pegar a carta."],
+        victoryCondition: "Acumular mais cartas quando o monte terminar.",
+        quickCheatSheet: ["Existe SEMPRE exatamente 1 símbolo em comum entre quaisquer 2 cartas!"], houseRules: [], faqs: []
+      },
+      quem_foi: {
+        id: "quem_foi", name: "Quem Foi?", category: "Memória / Reação", icon: "💩", players: "3-6 Jogadores", duration: "15 min", difficulty: "Muito Fácil", color: "from-amber-700 to-stone-900", isPublished: true, youtubeVideos: [],
+        objective: "Defender seus bichinhos e culpar o animal de outro jogador pelo cocô na sala!",
+        setup: ["Cada jogador recebe 6 cartas de animais da mesma cor."],
+        turnStructure: ["1. Baixe uma carta e diga: 'Não foi meu Gato, foi o COELHO!'.", "2. Todos tentam baixar o Coelho rapidamente.", "3. O primeiro a baixar limpa o seu bichinho!"],
+        victoryCondition: "Terminar a partida com a menor quantidade de fichas de cocô.",
+        quickCheatSheet: ["Se culpar um animal que ninguém mais tem, assume a culpa e ganha 1 cocô!"], houseRules: [], faqs: []
+      }
+    };
+
+    // ESTADO DA APLICAÇÃO
+    const state = {
+      appMode: "player", // 'player' ou 'dev'
+      isDevAuthenticated: false,
+      devPassword: localStorage.getItem("ruleMaster_dev_password") || "0000",
+      showPasswordModal: false,
+      enteredPassword: "",
+      passwordError: "",
+      playerTab: "overview", // 'overview', 'setup', 'faqs', 'referee', 'videos'
+      devTab: "add_game_manual", // 'add_game_manual', 'game_editor', 'theme_studio', 'password_mgr', 'backup', 'github'
+      selectedGameKey: "wonders_7",
+      editingGameKey: "wonders_7",
+      playerSearchQuery: "",
+      isVoiceEnabled: true,
+      isListening: false,
+      isAiThinking: false,
+      chatMessages: [
+        { role: "assistant", text: "Olá! Sou o Juiz Virtual da Mesa. Qual a sua dúvida sobre as regras do jogo selecionado?" }
+      ],
+      config: JSON.parse(localStorage.getItem("ruleMaster_config") || JSON.stringify({
+        appTitle: "RuleMaster AI",
+        appSubtitle: "Central & Estúdio de Regras de Jogos de Tabuleiro",
+        logoIcon: "🎲",
+        customBgColor: "#020617",
+        customCardBgColor: "#0f172a",
+        customBorderColor: "#1e293b",
+        customTextColor: "#f8fafc",
+        customAccentColor: "#9333ea",
+        footerText: "RuleMaster AI © 2026 • Execução Direta sem Compilação"
+      })),
+      games: JSON.parse(localStorage.getItem("ruleMaster_games") || JSON.stringify(BUILTIN_GAMES))
+    };
+
+    // SALVAR ESTADO
+    function saveState() {
+      localStorage.setItem("ruleMaster_config", JSON.stringify(state.config));
+      localStorage.setItem("ruleMaster_games", JSON.stringify(state.games));
+      localStorage.setItem("ruleMaster_dev_password", state.devPassword);
+    }
+
+    // VOZ (TEXT TO SPEECH)
+    function speakText(text) {
+      if (!state.isVoiceEnabled || !('speechSynthesis' in window)) return;
+      try {
+        window.speechSynthesis.cancel();
+        const cleanText = text.replace(/[*#_~`]/g, '');
+        const utterance = new SpeechSynthesisUtterance(cleanText);
+        utterance.lang = 'pt-BR';
+        utterance.rate = 1.05;
+        window.speechSynthesis.speak(utterance);
+      } catch (e) {}
+    }
+
+    // VOZ (SPEECH RECOGNITION)
+    function startListening() {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SpeechRecognition) {
+        alert("Ditado por voz não suportado neste navegador.");
+        return;
+      }
+      try {
+        const recognition = new SpeechRecognition();
+        recognition.lang = 'pt-BR';
+        recognition.onstart = () => { state.isListening = true; render(); };
+        recognition.onresult = (e) => {
+          const text = e.results[0][0].transcript;
+          const inputEl = document.getElementById("chat-input-field");
+          if (inputEl) inputEl.value = text;
+          state.isListening = false;
+          render();
+        };
+        recognition.onerror = () => { state.isListening = false; render(); };
+        recognition.onend = () => { state.isListening = false; render(); };
+        recognition.start();
+      } catch (err) {
+        state.isListening = false;
+        render();
+      }
+    }
+
+    // JUIZ VIRTUAL - ENVIAR MENSAGEM
+    function handleSendMessage(e) {
+      if (e) e.preventDefault();
+      const inputEl = document.getElementById("chat-input-field");
+      if (!inputEl || !inputEl.value.trim() || state.isAiThinking) return;
+
+      const userText = inputEl.value.trim();
+      inputEl.value = "";
+
+      state.chatMessages.push({ role: "user", text: userText });
+      state.isAiThinking = true;
+      render();
+
+      setTimeout(() => {
+        const game = state.games[state.selectedGameKey] || Object.values(state.games)[0];
+        const q = userText.toLowerCase();
+        let reply = "";
+
+        if (q.includes("vencer") || q.includes("vitoria") || q.includes("pontos")) {
+          reply = `Para vencer em **${game.name}**: ${game.victoryCondition}`;
+        } else if (q.includes("setup") || q.includes("prepara") || q.includes("iniciar")) {
+          reply = `Preparação de **${game.name}**: ${game.setup ? game.setup.join(" ") : "Siga o padrão do manual."}`;
+        } else if (q.includes("turno") || q.includes("jogada") || q.includes("acao")) {
+          reply = `No seu turno em **${game.name}**: ${game.turnStructure ? game.turnStructure.join(" | ") : "Execute as ações do turno."}`;
+        } else {
+          reply = `Consulta (${game.name}): Conforme o manual oficial, ${game.objective} Confira o resumo rápido na aba Visão Geral!`;
+        }
+
+        state.chatMessages.push({ role: "assistant", text: reply });
+        state.isAiThinking = false;
+        render();
+        speakText(reply);
+      }, 500);
+    }
+
+    // CADASTRO MANUAL DE NOVO JOGO
+    function handleCreateGameForm(e) {
+      e.preventDefault();
+      const name = document.getElementById("new-game-name").value.trim();
+      if (!name) return;
+
+      const newKey = `game_${Date.now()}`;
+      const newGame = {
+        id: newKey,
+        name: name,
+        category: document.getElementById("new-game-category").value || "Tabuleiro",
+        icon: document.getElementById("new-game-icon").value || "🎲",
+        players: "2-4 Jogadores",
+        duration: "30 min",
+        difficulty: "Médio",
+        color: "from-purple-600 to-indigo-700",
+        isPublished: true,
+        objective: document.getElementById("new-game-objective").value || "Objetivo do jogo.",
+        victoryCondition: document.getElementById("new-game-victory").value || "Como vencer.",
+        setup: ["Preparação padrão do jogo."],
+        turnStructure: ["Fazer ações no seu turno."],
+        quickCheatSheet: ["Resumo da partida."],
+        houseRules: [],
+        faqs: [],
+        youtubeVideos: []
+      };
+
+      state.games[newKey] = newGame;
+      state.selectedGameKey = newKey;
+      state.editingGameKey = newKey;
+      saveState();
+
+      alert(`🎉 Jogo "${newGame.name}" cadastrado e adicionado à estante!`);
+      render();
+    }
+
+    // RENDERIZADOR PRINCIPAL (VANILLA DOM)
+    function render() {
+      const root = document.getElementById("app-root");
+      const cfg = state.config;
+      const gamesList = Object.values(state.games).filter(g => {
+        if (!state.playerSearchQuery) return true;
+        return g.name.toLowerCase().includes(state.playerSearchQuery.toLowerCase());
+      });
+      const selectedGame = state.games[state.selectedGameKey] || gamesList[0] || BUILTIN_GAMES.wonders_7;
+      const editingGame = state.games[state.editingGameKey] || selectedGame;
+
+      const cardStyle = `background-color: ${cfg.customCardBgColor}; border-color: ${cfg.customBorderColor}; color: ${cfg.customTextColor};`;
+      const accentStyle = `background-color: ${cfg.customAccentColor}; color: #ffffff;`;
+
+      let html = `
+        <!-- HEADER -->
+        <header class="border-b sticky top-0 z-40 backdrop-blur-md" style="background-color: ${cfg.customBgColor}ee; border-color: ${cfg.customBorderColor}">
+          <div class="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-4">
+            <div class="flex items-center gap-3">
+              <span class="text-2xl p-2 rounded-2xl border" style="${cardStyle}">${cfg.logoIcon}</span>
+              <div>
+                <h1 class="text-base font-black tracking-wide text-white flex items-center gap-2">
+                  ${cfg.appTitle}
+                  <span class="text-[10px] uppercase font-bold px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30 flex items-center gap-1">
+                    ${getIcon("cloud", "w-3 h-3 text-emerald-400")}
+                    ${gamesList.length} Jogos
+                  </span>
+                </h1>
+                <p class="text-xs text-slate-400 hidden sm:block">${cfg.appSubtitle}</p>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-2 p-1 rounded-2xl border" style="${cardStyle}">
+              <button onclick="state.appMode='player'; render();" class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${state.appMode === 'player' ? 'text-white shadow-lg' : 'text-slate-400'}" style="${state.appMode === 'player' ? accentStyle : ''}">
+                ${getIcon("users", "w-3.5 h-3.5")} <span>Jogadores</span>
+              </button>
+              <button onclick="if(state.isDevAuthenticated){ state.appMode='dev'; render(); } else { state.showPasswordModal=true; render(); }" class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${state.appMode === 'dev' ? 'bg-amber-600 text-white shadow-lg' : 'text-slate-400'}">
+                ${getIcon("shield", "w-3.5 h-3.5")} <span>Painel Dev</span>
+                ${!state.isDevAuthenticated ? getIcon("lock", "w-3 h-3 text-amber-400") : ''}
+              </button>
+            </div>
+          </div>
+        </header>
+
+        <!-- MODAL SENHA DEV -->
+        ${state.showPasswordModal ? `
+          <div class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn">
+            <div class="p-6 rounded-3xl max-w-md w-full border shadow-2xl space-y-4" style="${cardStyle}">
+              <div class="flex items-center justify-between border-b pb-3" style="border-color: ${cfg.customBorderColor}">
+                <div class="flex items-center gap-2.5">
+                  ${getIcon("key", "w-5 h-5 text-amber-400")}
+                  <h3 class="text-base font-bold text-white">Acesso do Desenvolvedor</h3>
+                </div>
+                <button onclick="state.showPasswordModal=false; render();" class="text-slate-400 hover:text-white">${getIcon("x", "w-5 h-5")}</button>
+              </div>
+              <form onsubmit="
+                event.preventDefault();
+                const pass = document.getElementById('pass-input').value;
+                if(pass === state.devPassword){
+                  state.isDevAuthenticated = true;
+                  state.showPasswordModal = false;
+                  state.appMode = 'dev';
+                  render();
+                } else {
+                  document.getElementById('pass-err').innerText = 'Senha incorreta (Padrão: 0000)';
+                }
+              " class="space-y-4">
+                <div>
+                  <label class="text-xs font-bold text-slate-300 block mb-1">Senha Dev</label>
+                  <input id="pass-input" type="password" placeholder="Senha (Padrão: 0000)" autofocus class="w-full border rounded-xl px-4 py-3 text-sm text-white focus:outline-none" style="background-color: ${cfg.customBgColor}; border-color: ${cfg.customBorderColor}" />
+                  <p id="pass-err" class="text-xs text-rose-400 mt-2"></p>
+                </div>
+                <button type="submit" class="w-full py-2.5 rounded-xl text-xs font-bold bg-amber-600 text-white shadow-lg">Entrar</button>
+              </form>
+            </div>
+          </div>
+        ` : ''}
+
+        <!-- CONTEÚDO -->
+        <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-6 space-y-6">
+          ${state.appMode === 'player' ? `
+            <!-- BARRA DE SELEÇÃO DE JOGOS -->
+            <div class="p-4 rounded-3xl border space-y-3" style="${cardStyle}">
+              <div class="relative">
+                <input type="text" placeholder="🔍 Filtrar entre os jogos da estante..." value="${state.playerSearchQuery}" oninput="state.playerSearchQuery=this.value; render();" class="w-full border rounded-xl pl-9 pr-4 py-2.5 text-xs text-white focus:outline-none" style="background-color: ${cfg.customBgColor}; border-color: ${cfg.customBorderColor}" />
+                <div class="absolute left-3 top-3 text-slate-500">${getIcon("search", "w-4 h-4")}</div>
+              </div>
+
+              <div class="flex items-center gap-2 overflow-x-auto pt-1 pb-1">
+                ${gamesList.map(g => `
+                  <button onclick="state.selectedGameKey='${g.id}'; state.chatMessages=[{role:'assistant', text:'Consultando regras de **${g.name}**.'}]; render();" class="px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 border shrink-0 ${state.selectedGameKey === g.id ? 'text-white shadow-lg scale-105' : 'text-slate-400'}" style="${state.selectedGameKey === g.id ? accentStyle : `background-color: ${cfg.customBgColor}; border-color: ${cfg.customBorderColor}`}">
+                    <span>${g.icon || '🎲'}</span>
+                    <span>${g.name}</span>
+                  </button>
+                `).join('')}
+              </div>
+            </div>
+
+            <!-- ABAS JOGADOR -->
+            <div class="flex items-center gap-2 border-b pb-2 overflow-x-auto" style="border-color: ${cfg.customBorderColor}">
+              <button onclick="state.playerTab='overview'; render();" class="px-4 py-2 text-xs font-bold flex items-center gap-2 border-b-2 ${state.playerTab === 'overview' ? 'border-amber-400 text-amber-400' : 'border-transparent text-slate-400'}">
+                ${getIcon("book", "w-4 h-4")} Visão Geral
+              </button>
+              <button onclick="state.playerTab='setup'; render();" class="px-4 py-2 text-xs font-bold flex items-center gap-2 border-b-2 ${state.playerTab === 'setup' ? 'border-amber-400 text-amber-400' : 'border-transparent text-slate-400'}">
+                ${getIcon("layers", "w-4 h-4")} Setup & Turno
+              </button>
+              <button onclick="state.playerTab='referee'; render();" class="px-4 py-2 text-xs font-bold flex items-center gap-2 border-b-2 ${state.playerTab === 'referee' ? 'border-amber-400 text-amber-400' : 'border-transparent text-slate-400'}">
+                ${getIcon("message", "w-4 h-4")} Juiz IA (Voz)
+              </button>
+            </div>
+
+            ${state.playerTab === 'overview' && selectedGame ? `
+              <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fadeIn">
+                <div class="lg:col-span-2 space-y-6">
+                  <div class="p-6 rounded-3xl border space-y-4 shadow-2xl" style="${cardStyle}">
+                    <div class="flex items-center gap-4">
+                      <div class="w-16 h-16 rounded-2xl bg-gradient-to-br ${selectedGame.color || 'from-purple-600 to-indigo-700'} flex items-center justify-center text-3xl shadow-lg shrink-0">
+                        ${selectedGame.icon}
+                      </div>
+                      <div>
+                        <h2 class="text-xl font-black text-white">${selectedGame.name}</h2>
+                        <p class="text-xs text-slate-400">${selectedGame.category} • ${selectedGame.players} • ${selectedGame.duration}</p>
+                      </div>
+                    </div>
+                    <p class="text-xs text-slate-200 leading-relaxed pt-2">${selectedGame.objective}</p>
+                  </div>
+
+                  <div class="p-6 rounded-3xl border space-y-3" style="${cardStyle}">
+                    <h3 class="text-xs font-bold text-amber-400 uppercase tracking-wider">Condição de Vitória</h3>
+                    <p class="text-xs text-slate-200">${selectedGame.victoryCondition}</p>
+                  </div>
+                </div>
+
+                <div class="p-6 rounded-3xl border space-y-3" style="${cardStyle}">
+                  <h3 class="text-xs font-bold text-amber-400 uppercase tracking-wider flex items-center gap-2">
+                    ${getIcon("zap", "w-4 h-4")} Resumo Rápido
+                  </h3>
+                  <ul class="space-y-2 text-xs text-slate-300">
+                    ${(selectedGame.quickCheatSheet || []).map(item => `
+                      <li class="flex items-start gap-2">${getIcon("check", "w-4 h-4 text-emerald-400 shrink-0")} <span>${item}</span></li>
+                    `).join('')}
+                  </ul>
+                </div>
+              </div>
+            ` : ''}
+
+            ${state.playerTab === 'setup' && selectedGame ? `
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-6 animate-fadeIn">
+                <div class="p-6 rounded-3xl border space-y-4" style="${cardStyle}">
+                  <h3 class="text-xs font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-2">
+                    ${getIcon("layers", "w-4 h-4")} Preparação
+                  </h3>
+                  <ol class="space-y-2 text-xs text-slate-300">
+                    ${(selectedGame.setup || []).map((step, i) => `
+                      <li class="p-2.5 rounded-xl border flex items-center gap-2" style="background-color: ${cfg.customBgColor}; border-color: ${cfg.customBorderColor}">
+                        <span class="font-bold text-emerald-400">${i+1}.</span> ${step}
+                      </li>
+                    `).join('')}
+                  </ol>
+                </div>
+
+                <div class="p-6 rounded-3xl border space-y-4" style="${cardStyle}">
+                  <h3 class="text-xs font-bold text-amber-400 uppercase tracking-wider flex items-center gap-2">
+                    ${getIcon("clock", "w-4 h-4")} Estrutura do Turno
+                  </h3>
+                  <div class="space-y-2 text-xs text-slate-300">
+                    ${(selectedGame.turnStructure || []).map(step => `
+                      <div class="p-2.5 rounded-xl border" style="background-color: ${cfg.customBgColor}; border-color: ${cfg.customBorderColor}">${step}</div>
+                    `).join('')}
+                  </div>
+                </div>
+              </div>
+            ` : ''}
+
+            ${state.playerTab === 'referee' ? `
+              <div class="p-6 rounded-3xl border space-y-4 max-w-3xl mx-auto animate-fadeIn" style="${cardStyle}">
+                <div class="flex items-center justify-between border-b pb-3" style="border-color: ${cfg.customBorderColor}">
+                  <div class="flex items-center gap-3">
+                    ${getIcon("bot", "w-6 h-6 text-amber-400")}
+                    <div>
+                      <h3 class="text-sm font-bold text-white">Juiz Virtual DA MESA</h3>
+                      <p class="text-[11px] text-slate-400">${selectedGame.name}</p>
+                    </div>
+                  </div>
+                  <button onclick="state.isVoiceEnabled=!state.isVoiceEnabled; render();" class="p-2 rounded-xl border text-xs">
+                    ${getIcon("volume", `w-4 h-4 ${state.isVoiceEnabled ? 'text-amber-400' : 'text-slate-500'}`)}
+                  </button>
+                </div>
+
+                <div class="h-80 overflow-y-auto space-y-3 p-4 rounded-2xl border" style="background-color: ${cfg.customBgColor}; border-color: ${cfg.customBorderColor}">
+                  ${state.chatMessages.map(msg => `
+                    <div class="flex gap-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}">
+                      <div class="p-3.5 rounded-2xl text-xs ${msg.role === 'user' ? 'text-white' : 'text-slate-200 border'}" style="${msg.role === 'user' ? accentStyle : cardStyle}">
+                        ${msg.text}
+                      </div>
+                    </div>
+                  `).join('')}
+                  ${state.isAiThinking ? `<div class="text-xs text-slate-500 italic">Juiz consultando regras...</div>` : ''}
+                </div>
+
+                <form onsubmit="handleSendMessage(event);" class="flex gap-2">
+                  <button type="button" onclick="startListening();" class="p-3 rounded-xl border text-white ${state.isListening ? 'bg-rose-600' : 'bg-slate-800'}">
+                    ${getIcon("mic", "w-4 h-4 text-amber-400")}
+                  </button>
+                  <input id="chat-input-field" type="text" placeholder="Dúvida sobre as regras..." class="flex-1 border rounded-xl px-4 py-3 text-xs text-white" style="background-color: ${cfg.customBgColor}; border-color: ${cfg.customBorderColor}" />
+                  <button type="submit" class="px-5 py-3 rounded-xl text-white font-bold text-xs shadow-lg" style="${accentStyle}">
+                    ${getIcon("send", "w-3.5 h-3.5")}
+                  </button>
+                </form>
+              </div>
+            ` : ''}
+
+          ` : `
+            <!-- PAINEL DEV -->
+            <div class="space-y-6">
+              <div class="p-4 rounded-3xl border flex items-center justify-between" style="${cardStyle}">
+                <div class="flex items-center gap-3">
+                  ${getIcon("shield", "w-6 h-6 text-amber-400")}
+                  <div>
+                    <h2 class="text-base font-bold text-white">Painel do Desenvolvedor</h2>
+                    <p class="text-xs text-slate-400">Cadastre futuros jogos e gerencie a biblioteca</p>
+                  </div>
+                </div>
+                <button onclick="state.appMode='player'; render();" class="px-4 py-2 rounded-xl border text-xs font-bold hover:border-amber-500">
+                  👁️ Ver Como Jogador
+                </button>
+              </div>
+
+              <div class="p-6 rounded-3xl border space-y-4" style="${cardStyle}">
+                <h3 class="text-base font-bold text-white flex items-center gap-2">
+                  ${getIcon("plus", "w-5 h-5 text-amber-400")} Cadastrar Futuro Jogo na Estante
+                </h3>
+
+                <form onsubmit="handleCreateGameForm(event);" class="space-y-4 pt-2">
+                  <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                      <label class="text-xs font-bold text-slate-300 block mb-1">Nome do Jogo *</label>
+                      <input id="new-game-name" type="text" required placeholder="Ex: Catan" class="w-full border rounded-xl p-2.5 text-xs text-white" style="background-color: ${cfg.customBgColor}; border-color: ${cfg.customBorderColor}" />
+                    </div>
+                    <div>
+                      <label class="text-xs font-bold text-slate-300 block mb-1">Categoria</label>
+                      <input id="new-game-category" type="text" placeholder="Ex: Estratégia" class="w-full border rounded-xl p-2.5 text-xs text-white" style="background-color: ${cfg.customBgColor}; border-color: ${cfg.customBorderColor}" />
+                    </div>
+                    <div>
+                      <label class="text-xs font-bold text-slate-300 block mb-1">Emoji / Ícone</label>
+                      <input id="new-game-icon" type="text" value="🎲" class="w-full border rounded-xl p-2.5 text-xs text-white text-center" style="background-color: ${cfg.customBgColor}; border-color: ${cfg.customBorderColor}" />
+                    </div>
+                  </div>
+
+                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label class="text-xs font-bold text-slate-300 block mb-1">Objetivo do Jogo</label>
+                      <textarea id="new-game-objective" rows="2" placeholder="Objetivo..." class="w-full border rounded-xl p-2.5 text-xs text-white" style="background-color: ${cfg.customBgColor}; border-color: ${cfg.customBorderColor}"></textarea>
+                    </div>
+                    <div>
+                      <label class="text-xs font-bold text-slate-300 block mb-1">Condição de Vitória</label>
+                      <textarea id="new-game-victory" rows="2" placeholder="Como vence..." class="w-full border rounded-xl p-2.5 text-xs text-white" style="background-color: ${cfg.customBgColor}; border-color: ${cfg.customBorderColor}"></textarea>
+                    </div>
+                  </div>
+
+                  <button type="submit" class="px-6 py-3 rounded-xl text-white font-bold text-xs shadow-lg" style="${accentStyle}">
+                    Salvar e Adicionar à Estante
+                  </button>
+                </form>
+              </div>
+            </div>
+          `}
+        </main>
+
+        <footer class="border-t py-4 text-center text-xs text-slate-500 mt-auto" style="border-color: ${cfg.customBorderColor}">
+          ${cfg.footerText}
+        </footer>
+      `;
+
+      root.innerHTML = html;
+    }
+
+    // INICIALIZAÇÃO AUTOMÁTICA AO CARREGAR
+    window.addEventListener("DOMContentLoaded", () => {
+      render();
+    });
+  </script>
+
+</body>
+</html>
